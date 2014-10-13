@@ -187,5 +187,5 @@ nav:after {
   width: 4px;
   background-color: red;
   top: -6px;
-  transition: left 1s;
+  //transition: left 1s;
 }

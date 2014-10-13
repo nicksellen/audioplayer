@@ -55,7 +55,7 @@ var AlbumList = React.createClass({displayName: 'AlbumList',
       ), 
       React.DOM.ul(null, 
         this.props.albums.filter(this.filter).map(function(album){
-          var key = album.name;
+          var key = [album.name, album.artists].join('::');
           var url = "/albums/" + encodeURIComponent(album.name);
           return React.DOM.li({key: key}, 
             React.DOM.a({href: url}, 
@@ -225,7 +225,6 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
     };
   },
   componentDidMount: function(){
-
     superagent.get('/api/albums', function(res) {
       this.setState({ albums: res.body.albums });
     }.bind(this));
@@ -237,7 +236,7 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
     page('/albums', function(req){
       this.setProps({
         renderPage: function(){
-          return AlbumList({albums: this.state.albums});
+          return React.DOM.div(null);
         }.bind(this)
       });
     }.bind(this));
@@ -250,18 +249,17 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
       this.setProps({
         renderPage: function(){
           var album = this.state.album;
-          return React.DOM.div(null, 
-            AlbumList({albums: this.state.albums}), 
-            album && AlbumDetail({album: album})
-          );
+          if (album) return AlbumDetail({album: album});
         }.bind(this)
       });
     }.bind(this));
 
     page.start();
+
   },
   render: function(){
     return React.DOM.div(null, 
+      AlbumList({albums: this.state.albums}), 
       this.props.renderPage(), 
       AudioPlayer(null)
     );

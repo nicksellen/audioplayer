@@ -96,6 +96,7 @@ func Server() {
 			where album is not null and album != ''
 			group by album 
 			order by lower(album)
+			limit 100
 		`)
 		if err != nil {
 			log.Fatal(err)
@@ -119,7 +120,7 @@ func Server() {
 		w.Write(b)
 	})
 
-	router.HandleFunc("/api/albums/{name}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/api/albums/{name:.+}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		vars := mux.Vars(r)
 		tracks := []Track{}
