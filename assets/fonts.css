@@ -1,0 +1,43 @@
+@font-face {
+	font-family: 'mp';
+	src:url('fonts/mp.eot?-5iifxh');
+	src:url('fonts/mp.eot?#iefix-5iifxh') format('embedded-opentype'),
+		url('fonts/mp.woff?-5iifxh') format('woff'),
+		url('fonts/mp.ttf?-5iifxh') format('truetype'),
+		url('fonts/mp.svg?-5iifxh#mp') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+
+.icon {
+	font-family: 'mp';
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-transform: none;
+	line-height: 1;
+
+	/* Better Font Rendering =========== */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.icon-play:before {
+	content: "\e600";
+}
+.icon-pause:before {
+	content: "\e601";
+}
+.icon-stop:before {
+	content: "\e602";
+}
+.icon-first:before {
+	content: "\e603";
+}
+.icon-last:before {
+	content: "\e604";
+}
+.icon-eject:before {
+	content: "\e605";
+}
