@@ -30,11 +30,19 @@ type Album struct {
 }
 
 type AlbumDetails struct {
-	Name   string  `json:"name"`
-	Tracks []Track `json:"tracks"`
+	Name   string       `json:"name"`
+	Tracks []AlbumTrack `json:"tracks"`
 }
 
-type Track struct {
+type AlbumTrack struct {
+	Id      int64    `json:"id"`
+	Title   string   `json:"name"`
+	Artist  string   `json:"artist"`
+	Pos     int      `json:"pos"`
+	Formats []string `json:"formats"`
+}
+
+type TrackDetails struct {
 	Id      int64    `json:"id"`
 	Title   string   `json:"name"`
 	Artist  string   `json:"artist"`
@@ -63,7 +71,11 @@ func Server() {
 	router.HandleFunc("/api/artists", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		artists := []Artist{}
-		rows, err := db.Query("select artist from tracks group by artist order by artist")
+		rows, err := db.Query(`
+			select artist from tracks
+			group by artist
+			order by artist
+		`)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -122,7 +134,7 @@ func Server() {
 	router.HandleFunc("/api/albums/{name:.+}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		vars := mux.Vars(r)
-		tracks := []Track{}
+		tracks := []AlbumTrack{}
 		name := vars["name"]
 		fmt.Printf("looking album: %s\n", name)
 		rows, err := db.Query(`
@@ -146,7 +158,7 @@ func Server() {
 			var track int
 			var formats string
 			rows.Scan(&id, &title, &album, &artist, &track, &formats)
-			tracks = append(tracks, Track{Id: id, Title: title, Artist: artist, Pos: track, Formats: strings.Split(formats, ",")})
+			tracks = append(tracks, AlbumTrack{Id: id, Title: title, Artist: artist, Pos: track, Formats: strings.Split(formats, ",")})
 		}
 		err = rows.Err()
 		if err != nil {
@@ -180,7 +192,7 @@ func Server() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		tr := Track{Id: id, Title: title, Artist: artist, Pos: track}
+		tr := TrackDetails{Id: id, Title: title, Artist: artist, Pos: track}
 		b, err := json.Marshal(tr)
 		if err != nil {
 			log.Fatal(err)

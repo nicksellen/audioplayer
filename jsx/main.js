@@ -32,9 +32,9 @@ EventBus.prototype.send = function(channel, message) {
   setTimeout(function(){
     var ch = this.channels[channel];
     if (ch) {
-      ch.listeners.forEach(function(listener){
+      ch.listeners.forEach(listener => {
         listener(message);
-      }.bind(this));
+      });
     } else {
       console.log('unhandled mesage for', channel, ':', message);
     }
@@ -73,7 +73,7 @@ var AlbumList = React.createClass({
         <input type="text" placeholder="search" onChange={this.filterChanged}/>
       </div>
       <ul>
-        {this.props.albums.filter(this.filter).map(function(album){
+        {this.props.albums.filter(this.filter).map(album => {
           var key = [album.name, album.artists].join('::');
           var url = "/albums/" + encodeURIComponent(album.name);
           return <li key={key}>
@@ -83,7 +83,7 @@ var AlbumList = React.createClass({
             </a>
             
           </li>;
-        }.bind(this))}
+        })}
       </ul>
     </div>
   }
@@ -102,21 +102,21 @@ var AlbumDetail = React.createClass({
     }
   },
   componentDidMount: function() {
-    bus.subscribe('current', function(track){
+    bus.subscribe('current', track => {
       var tracks = this.props.album.tracks;
       var updated = false;
-      tracks.forEach(function(t) {
+      tracks.forEach(t => {
         if (track && t.id === track.id) {
           t.playing = true;
           updated = true;
         } else {
           delete t.playing;
         }
-      }.bind(this));
+      });
       if (updated) {
         this.forceUpdate();
       }
-    }.bind(this));
+    });
   },
   componentWillReceiveProps: function() {
     bus.send('update');
@@ -127,7 +127,7 @@ var AlbumDetail = React.createClass({
       <h2>{album.name}</h2>
       <table>
         <tbody>
-          {album.tracks.map(function(track){
+          {album.tracks.map(track => {
             var key = track.id;
             var classes = cx({
               'playing': !!track.playing
@@ -143,7 +143,7 @@ var AlbumDetail = React.createClass({
               <td>{track.artist}</td>
               <td className="formats" width="80px">{track.formats.join(' ')}</td>
             </tr>;
-          }.bind(this))}
+          })}
         </tbody>
       </table>
     </div>
@@ -171,7 +171,7 @@ var AudioPlayer = React.createClass({
     var audio = document.createElement('audio');
     this.audio = audio;
 
-    bus.subscribe('now', function(track){
+    bus.subscribe('now', track => {
       this.setState({ track: track });
       var format = track.formats.indexOf('mp3') !== -1 ? 'mp3' : track.formats[0];
       var url = "/audio/" + track.id + '.' + format;
@@ -179,27 +179,27 @@ var AudioPlayer = React.createClass({
       audio.load();
       audio.play();
       bus.send('current', this.state.track);
-    }.bind(this));
+    });
 
-    bus.subscribe('update', function(){
+    bus.subscribe('update', () => {
       bus.send('current', this.state.track);
-    }.bind(this));
+    });
 
-    bus.subscribe('queue', function(track){
+    bus.subscribe('queue', track => {
       this.state.queue.push(track);
-    }.bind(this));
+    });
 
-    bus.subscribe('clear', function(){
+    bus.subscribe('clear', () => {
       this.setState({ queue: [] });
-    }.bind(this));
+    });
 
-    audio.addEventListener('ended', function(){
+    audio.addEventListener('ended', () => {
       if (this.state.queue.length > 0) {
         var next = this.state.queue[0];
         this.state.queue.splice(0, 1);
         bus.send('now', next);
       }
-    }.bind(this));
+    });
 
   },
   render: function(){
@@ -221,11 +221,11 @@ var CurrentTrack = React.createClass({
   componentDidMount: function(){
     var audio = this.props.audio;
 
-    audio.addEventListener('durationchange', function(){
+    audio.addEventListener('durationchange', () => {
       this.setState({ duration: audio.duration });
-    }.bind(this));
+    });
 
-    audio.addEventListener('timeupdate', function(e){
+    audio.addEventListener('timeupdate', e => {
       var time = audio.currentTime;
       var minutes = Math.floor(time / 60);
       var seconds = Math.floor(time - minutes * 60);
@@ -237,15 +237,15 @@ var CurrentTrack = React.createClass({
         seconds: Math.floor(audio.currentTime),
         progress: progress
       })
-    }.bind(this));
+    });
 
-    audio.addEventListener('playing', function(){
+    audio.addEventListener('playing', () => {
       this.setState({ playing: true });
-    }.bind(this));
+    });
 
-    audio.addEventListener('pause', function(){
+    audio.addEventListener('pause', () => {
       this.setState({ playing: false });
-    }.bind(this));
+    });
 
   },
   toggle: function(){
@@ -304,30 +304,28 @@ var MediaPlayer = React.createClass({
       this.setState({ albums: res.body.albums });
     }.bind(this));
 
-    page('/', function(req){
+    page('/', req => {
       window.location = '/albums';
-    }.bind(this));
+    });
 
-    page('/albums', function(req){
+    page('/albums', req => {
       this.setProps({
-        renderPage: function(){
-          return <div/>;
-        }.bind(this)
+        renderPage: () => <div/>;
       });
-    }.bind(this));
+    });
 
-    page(new RegExp("\/albums\/(.+)"), function(req){
+    page(new RegExp("\/albums\/(.+)"), req => {
       var name = req.params[0];
       superagent.get('/api/albums/' + encodeURIComponent(name), function(res) {
         this.setState({ album: res.body });
       }.bind(this));
       this.setProps({
-        renderPage: function(){
+        renderPage: () => {
           var album = this.state.album;
           if (album) return <AlbumDetail album={album}/>;
-        }.bind(this)
+        }
       });
-    }.bind(this));
+    });
 
     page.start();
 

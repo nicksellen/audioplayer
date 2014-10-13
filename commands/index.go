@@ -104,13 +104,8 @@ func Index(root string) {
 	var filecount uint32 = 0
 	var processedcount uint32 = 0
 
-	//var wg sync.WaitGroup
-
 	Walk(root, func(path string) {
-		//wg.Add(1)
 		atomic.AddUint32(&filecount, 1)
-		//go func() {
-		//defer wg.Done()
 		track, err := taglib.Read(root + path)
 		atomic.AddUint32(&processedcount, 1)
 		if err != nil {
@@ -170,9 +165,7 @@ func Index(root string) {
 
 			track.Close()
 		}
-		//}()
 	})
-	//wg.Wait()
 	tx.Commit()
 	fmt.Fprintf(os.Stderr, "%d/%d\n", atomic.LoadUint32(&processedcount), atomic.LoadUint32(&filecount))
 }
