@@ -96,7 +96,6 @@ func Server() {
 			where album is not null and album != ''
 			group by album 
 			order by lower(album)
-			limit 100
 		`)
 		if err != nil {
 			log.Fatal(err)

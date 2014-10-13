@@ -5,8 +5,8 @@
 html {
 
   font-family: Arimo;
-  font-size: 14px;
-  line-height: 18px;
+  font-size: 16px;
+  line-height: 20px;
 }
 
 nav ul {
@@ -66,14 +66,17 @@ nav:after {
   display: block;
   text-decoration: none;
   color: black;
-  padding: 5px 20px;
+  padding: 8px 20px;
   border-left: 5px solid transparent;
+  font-size: 16px;
+  line-height: 20px;
 }
 
 .album-list .artists {
-  color: #888;
+  color: #555;
   display: block;
   margin-bottom: 2px;
+  font-size: 80%;
 }
 
 .album-list ul a:hover {
@@ -97,6 +100,16 @@ nav:after {
 
 .album-detail .formats {
   color: #aaa;
+  font-size: 80%;
+}
+
+.album-detail .pos {
+  text-align: right;
+  color: #888;
+}
+
+.album-detail .playing .icon {
+  color: red;
 }
 
 .audio-player {
@@ -112,9 +125,11 @@ nav:after {
 
 .audio-player .current-track .toggle {
   float: left;
+  position: absolute;
   cursor: pointer;
   margin-right: 10px;
   height: 60px;
+  z-index: 500;
 }
 
 .audio-player .current-track .toggle .icon {
@@ -126,15 +141,22 @@ nav:after {
 .audio-player .current-track .position {
   float: right;
   font-size: 40px;
+  line-height: 50px;
   color: #ddd;
   font-family: monospace;
-  margin-top: 15px;
+  margin: 0;
 }
 
 .audio-player .current-track .what {
-  margin-top: 15px;
+  margin: 0;
   float: left;
   font-size: 40px;
+  width: 100%;
+  line-height: 50px;
+  position: absolute;
+  padding-left: 50px;
+  padding-right: 170px;
+  overflow: hidden;
 }
 
 .audio-player .current-track .what .artist {
@@ -152,6 +174,10 @@ nav:after {
   border-bottom: 1px solid #f0f0f0;
 }
 
+.album-detail table tr:last-child td {
+  border-bottom: none;
+}
+
 .album-detail table tr {
   border-left: 5px solid transparent;
 }
@@ -163,12 +189,16 @@ nav:after {
 }
 
 .album-detail table tr:hover .icon {
+  color: #FF7474;
+}
+
+.album-detail table tr.playing:hover .icon {
   color: red;
 }
 
 .play-control {
   cursor: pointer;
-  color: #aaa;
+  color: #eee;
   font-size: 18px;
 }
 

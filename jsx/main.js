@@ -29,24 +29,43 @@ EventBus.prototype.unsubscribe = function(channel, callback) {
 }
 
 EventBus.prototype.send = function(channel, message) {
-  var ch = this.channels[channel];
-  if (ch) {
-    ch.listeners.forEach(function(listener){
-      listener(message);
-    });
-  }
+  setTimeout(function(){
+    var ch = this.channels[channel];
+    if (ch) {
+      ch.listeners.forEach(function(listener){
+        listener(message);
+      }.bind(this));
+    } else {
+      console.log('unhandled mesage for', channel, ':', message);
+    }
+  }.bind(this), 0);
 }
 
 var bus = new EventBus();
 
 var AlbumList = React.createClass({
   filterChanged: function(e) {
-    this.setState({ query: e.target.value.toLowerCase() });
+    if (this.timeout) clearTimeout(this.timeout);
+    this.timeout = setTimeout(function(val){
+      this.setState({ query: val });
+      this.forceUpdate();
+    }.bind(this, e.target.value.toLowerCase()), 200);
   },
   filter: function(album) {
     var q = this.state && this.state.query;
     if (!q) return true;
     return album.name.toLowerCase().indexOf(q) !== -1 || album.artists.toLowerCase().indexOf(q) !== -1;
+  },
+  shouldComponentUpdate: function(nextProps, nextState) {
+    if (!nextProps || !nextProps.albums) return true;
+    if (!this.albumCount) {
+      this.albumCount = nextProps.albums.length;
+      return true;
+    } else if (this.albumCount !== nextProps.albums.length) {
+      this.albumCount = nextProps.albums.length;
+      return true;
+    } 
+    return false;
   },
   render: function(){
     return <div className="album-list">
@@ -72,7 +91,35 @@ var AlbumList = React.createClass({
 
 var AlbumDetail = React.createClass({
   play: function(track){
-    bus.send('track', track);
+    bus.send('clear');
+    bus.send('now', track);
+    var album = this.props.album;
+    var idx = album.tracks.indexOf(track);
+    if (idx !== -1) {
+      for (var i = idx + 1; i < album.tracks.length; i++) {
+        bus.send('queue', album.tracks[i]);
+      }
+    }
+  },
+  componentDidMount: function() {
+    bus.subscribe('current', function(track){
+      var tracks = this.props.album.tracks;
+      var updated = false;
+      tracks.forEach(function(t) {
+        if (track && t.id === track.id) {
+          t.playing = true;
+          updated = true;
+        } else {
+          delete t.playing;
+        }
+      }.bind(this));
+      if (updated) {
+        this.forceUpdate();
+      }
+    }.bind(this));
+  },
+  componentWillReceiveProps: function() {
+    bus.send('update');
   },
   render: function(){
     var album = this.props.album;
@@ -82,13 +129,16 @@ var AlbumDetail = React.createClass({
         <tbody>
           {album.tracks.map(function(track){
             var key = track.id;
-            return <tr key={key} onClick={this.play.bind(this, track)}>
+            var classes = cx({
+              'playing': !!track.playing
+            });
+            return <tr key={key} className={classes} onClick={this.play.bind(this, track)}>
               <td width="40px">
                 <a className="play-control">
                   <span className="icon icon-play"></span>
                 </a>
               </td>
-              <td width="40px">{track.pos}</td>
+              <td className="pos" width="40px">{track.pos}</td>
               <td>{track.name}</td>
               <td>{track.artist}</td>
               <td className="formats" width="80px">{track.formats.join(' ')}</td>
@@ -102,7 +152,7 @@ var AlbumDetail = React.createClass({
 
 var Track = React.createClass({
   play: function(){
-    bus.send('track', this.props.track);
+    bus.send('now', this.props.track);
   },
   render: function(){
     var track = this.props.track;
@@ -113,20 +163,44 @@ var Track = React.createClass({
 var AudioPlayer = React.createClass({
   getInitialState: function(){
     return {
-      track: null
+      track: null,
+      queue: []
     }
   },
   componentDidMount: function(){
     var audio = document.createElement('audio');
     this.audio = audio;
-    bus.subscribe('track', function(track){
+
+    bus.subscribe('now', function(track){
       this.setState({ track: track });
       var format = track.formats.indexOf('mp3') !== -1 ? 'mp3' : track.formats[0];
       var url = "/audio/" + track.id + '.' + format;
       audio.src = url;
       audio.load();
       audio.play();
+      bus.send('current', this.state.track);
     }.bind(this));
+
+    bus.subscribe('update', function(){
+      bus.send('current', this.state.track);
+    }.bind(this));
+
+    bus.subscribe('queue', function(track){
+      this.state.queue.push(track);
+    }.bind(this));
+
+    bus.subscribe('clear', function(){
+      this.setState({ queue: [] });
+    }.bind(this));
+
+    audio.addEventListener('ended', function(){
+      if (this.state.queue.length > 0) {
+        var next = this.state.queue[0];
+        this.state.queue.splice(0, 1);
+        bus.send('now', next);
+      }
+    }.bind(this));
+
   },
   render: function(){
     var track = this.state.track;
@@ -225,6 +299,7 @@ var MediaPlayer = React.createClass({
     };
   },
   componentDidMount: function(){
+
     superagent.get('/api/albums', function(res) {
       this.setState({ albums: res.body.albums });
     }.bind(this));
