@@ -112,7 +112,7 @@ nav:after {
   color: red;
 }
 
-.audio-player {
+.audio-control {
   position: fixed;
   left: 0;
   right: 0;
@@ -123,7 +123,7 @@ nav:after {
   background-color: #fff;
 }
 
-.audio-player .current-track .toggle {
+.audio-control .current-track .toggle {
   float: left;
   position: absolute;
   cursor: pointer;
@@ -132,13 +132,13 @@ nav:after {
   z-index: 500;
 }
 
-.audio-player .current-track .toggle .icon {
+.audio-control .current-track .toggle .icon {
   font-size: 45px;
   color: #555;
   color: red;
 }
 
-.audio-player .current-track .position {
+.audio-control .current-track .position {
   float: right;
   font-size: 40px;
   line-height: 50px;
@@ -147,7 +147,7 @@ nav:after {
   margin: 0;
 }
 
-.audio-player .current-track .what {
+.audio-control .current-track .what {
   margin: 0;
   float: left;
   font-size: 40px;
@@ -159,14 +159,38 @@ nav:after {
   overflow: hidden;
 }
 
-.audio-player .current-track .what .artist {
+.audio-control .current-track .what .artist {
   padding-right: 10px;
   font-weight: bold;
+}
+
+ul.players {
+  position: absolute;
+  top: 0;
+  right: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.players li {
+  float: left;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 14px;
+  color: #fff;
+  background-color: #aaa;
+  margin-right: 4px;
+  cursor: pointer;
 }
 
 .album-detail table {
   border-collapse: collapse;
   width: 100%;
+}
+
+ul.players li.active {
+  background-color: red;
 }
 
 .album-detail table td {
@@ -218,4 +242,42 @@ nav:after {
   background-color: red;
   top: -6px;
   //transition: left 1s;
+}
+
+body.full {
+  background-color: #f0f0f0;
+}
+
+.audio-status {
+  text-align: center;
+  width: 50%;
+  margin: 0 auto;
+  margin-top: 80px;
+  padding: 20px;
+  font-size: 23px;
+  position: relative;
+  background-color: #fff;
+}
+
+
+.audio-status .position {
+  display: none;
+}
+
+.audio-status .what {
+  font-size: 48px;
+  line-height: 68px;
+  text-align: center;
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+
+.audio-status .what .artist {
+  font-weight: bold;
+  display: block;
+}
+
+
+.audio-status .what .title {
+  display:block;
 }

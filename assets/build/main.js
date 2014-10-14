@@ -1,47 +1,28 @@
  /** @jsx React.DOM */
 
-var cx = React.addons.classSet;
-
-function EventBus() {
-  this.channels = {};
-}
-
-EventBus.prototype.subscribe = function(channel, callback) {
-  var ch = this.channels[channel];
-  if (!ch) {
-    ch = { listeners: [] };
-    this.channels[channel] = ch;
-  }
-  ch.listeners.push(callback);
-}
-
-EventBus.prototype.unsubscribe = function(channel, callback) {
-  var ch = this.channels[channel];
-  if (ch) {
-    var idx = ch.listeners.indexOf(callback);
-    if (idx !== -1) {
-      ch.listeners.splice(idx, 1);
-      if (ch.listeners.length === 0) {
-        delete this.channels[channel];
-      }
-    }
-  }
-}
-
-EventBus.prototype.send = function(channel, message) {
-  setTimeout(function(){
-    var ch = this.channels[channel];
-    if (ch) {
-      ch.listeners.forEach(function(listener){
-        listener(message);
-      }.bind(this));
-    } else {
-      console.log('unhandled mesage for', channel, ':', message);
-    }
-  }.bind(this), 0);
-}
-
 var bus = new EventBus();
+var proxy = new PlayerBusProxy(bus);
+var ws = new WebsocketBridge();
+
+ws.on('remotebus', function(businfo){
+  proxy.registerBus(businfo.name, businfo.bus);
+});
+
+var remote;
+if (location.pathname === '/player') {
+  remote = 'remote player';
+} else if (location.search) {
+  remote = location.search.substring(1);
+}
+
+if (remote) {
+  var name = remote;
+  ws.createBridgedBus(name, function(bridgedbus)  {
+    proxy.registerBus('local', new AudioPlayer(bridgedbus).bus);
+  });
+} else {
+  proxy.registerBus('local', new AudioPlayer(new EventBus()).bus);
+}
 
 var AlbumList = React.createClass({displayName: 'AlbumList',
   filterChanged: function(e) {
@@ -73,7 +54,7 @@ var AlbumList = React.createClass({displayName: 'AlbumList',
         React.DOM.input({type: "text", placeholder: "search", onChange: this.filterChanged})
       ), 
       React.DOM.ul(null, 
-        this.props.albums.filter(this.filter).map(function(album){
+        this.props.albums.filter(this.filter).map(function(album)  {
           var key = [album.name, album.artists].join('::');
           var url = "/albums/" + encodeURIComponent(album.name);
           return React.DOM.li({key: key}, 
@@ -81,53 +62,51 @@ var AlbumList = React.createClass({displayName: 'AlbumList',
               React.DOM.span({className: "artists"}, album.artists), 
               React.DOM.span({className: "name"}, album.name)
             )
-            
           );
-        }.bind(this))
+        })
       )
     )
   }
 });
 
-var AlbumDetail = React.createClass({displayName: 'AlbumDetail',
+var TracksView = React.createClass({displayName: 'TracksView',
   play: function(track){
-    bus.send('clear');
-    bus.send('now', track);
-    var album = this.props.album;
-    var idx = album.tracks.indexOf(track);
+    bus.send('audio.queue.clear');
+    bus.send('audio.now', track);
+    var tracks = this.props.tracks;
+    var idx = tracks.indexOf(track);
     if (idx !== -1) {
-      for (var i = idx + 1; i < album.tracks.length; i++) {
-        bus.send('queue', album.tracks[i]);
+      for (var i = idx + 1; i < tracks.length; i++) {
+        bus.send('audio.queue.push', tracks[i]);
       }
     }
   },
   componentDidMount: function() {
-    bus.subscribe('current', function(track){
-      var tracks = this.props.album.tracks;
+    bus.subscribe('audio.track', function(track)  {
+      var tracks = this.props.tracks;
       var updated = false;
-      tracks.forEach(function(t) {
+      tracks.forEach(function(t)  {
         if (track && t.id === track.id) {
           t.playing = true;
           updated = true;
         } else {
           delete t.playing;
         }
-      }.bind(this));
+      });
       if (updated) {
         this.forceUpdate();
       }
     }.bind(this));
   },
   componentWillReceiveProps: function() {
-    bus.send('update');
+    bus.send('audio.request-update');
   },
   render: function(){
-    var album = this.props.album;
     return React.DOM.div({className: "album-detail"}, 
-      React.DOM.h2(null, album.name), 
+      React.DOM.h2(null, this.props.title), 
       React.DOM.table(null, 
         React.DOM.tbody(null, 
-          album.tracks.map(function(track){
+          this.props.tracks.map(function(track)  {
             var key = track.id;
             var classes = cx({
               'playing': !!track.playing
@@ -141,7 +120,7 @@ var AlbumDetail = React.createClass({displayName: 'AlbumDetail',
               React.DOM.td({className: "pos", width: "40px"}, track.pos), 
               React.DOM.td(null, track.name), 
               React.DOM.td(null, track.artist), 
-              React.DOM.td({className: "formats", width: "80px"}, track.formats.join(' '))
+              React.DOM.td({className: "formats", width: "80px"}, track.sources.map(function(source)  {return source.format;}).join(' '))
             );
           }.bind(this))
         )
@@ -152,7 +131,7 @@ var AlbumDetail = React.createClass({displayName: 'AlbumDetail',
 
 var Track = React.createClass({displayName: 'Track',
   play: function(){
-    bus.send('now', this.props.track);
+    bus.send('audio.now', this.props.track);
   },
   render: function(){
     var track = this.props.track;
@@ -160,105 +139,97 @@ var Track = React.createClass({displayName: 'Track',
   }
 });
 
-var AudioPlayer = React.createClass({displayName: 'AudioPlayer',
+var AudioPlayerSwitcher = React.createClass({displayName: 'AudioPlayerSwitcher',
   getInitialState: function(){
     return {
-      track: null,
-      queue: []
+      players: [],
+      activePlayer: null
     }
   },
+  setPlayer: function(name) {
+    bus.send('players.select', name);
+  },
   componentDidMount: function(){
-    var audio = document.createElement('audio');
-    this.audio = audio;
-
-    bus.subscribe('now', function(track){
-      this.setState({ track: track });
-      var format = track.formats.indexOf('mp3') !== -1 ? 'mp3' : track.formats[0];
-      var url = "/audio/" + track.id + '.' + format;
-      audio.src = url;
-      audio.load();
-      audio.play();
-      bus.send('current', this.state.track);
+    this.sub1 = bus.subscribe('players', function(players)  {
+      this.setState({ players: players });
     }.bind(this));
-
-    bus.subscribe('update', function(){
-      bus.send('current', this.state.track);
+    this.sub2 = bus.subscribe('players.active', function(player)  {
+      this.setState({ activePlayer: player });
     }.bind(this));
-
-    bus.subscribe('queue', function(track){
-      this.state.queue.push(track);
-    }.bind(this));
-
-    bus.subscribe('clear', function(){
-      this.setState({ queue: [] });
-    }.bind(this));
-
-    audio.addEventListener('ended', function(){
-      if (this.state.queue.length > 0) {
-        var next = this.state.queue[0];
-        this.state.queue.splice(0, 1);
-        bus.send('now', next);
-      }
-    }.bind(this));
-
+    bus.send('players.request-update');
+  },
+  componentWillUnmount: function(){
+    bus.unsubscribe(this.sub1, this.sub2);
   },
   render: function(){
-    var track = this.state.track;
-    return React.DOM.div({className: "audio-player"}, 
-      track && CurrentTrack({track: track, audio: this.audio})
-    );
+    return React.DOM.ul({className: "players"}, 
+      this.state.players.map(function(player)  {
+        var classes = cx({
+          active: this.state.activePlayer === player
+        })
+        return React.DOM.li({key: player, className: classes, onClick: this.setPlayer.bind(this, player)}, player);
+      }.bind(this))
+    )
   }
 });
 
-var CurrentTrack = React.createClass({displayName: 'CurrentTrack',
+var AudioControl = React.createClass({displayName: 'AudioControl',
   getInitialState: function(){
     return {
+      track: null,
       playing: false,
       position: '--:--',
       duration: 0
     }
   },
   componentDidMount: function(){
-    var audio = this.props.audio;
 
-    audio.addEventListener('durationchange', function(){
-      this.setState({ duration: audio.duration });
+    bus.subscribe('audio.track', function(track)  {
+      this.setState({ track: track });
     }.bind(this));
 
-    audio.addEventListener('timeupdate', function(e){
-      var time = audio.currentTime;
+    bus.subscribe('audio.duration', function(duration)  {
+      this.setState({ duration: duration });
+    }.bind(this));
+
+    bus.subscribe('audio.time', function(time)  {
       var minutes = Math.floor(time / 60);
       var seconds = Math.floor(time - minutes * 60);
       minutes = minutes < 10 ? '0' + minutes : '' + minutes;
       seconds = seconds < 10 ? '0' + seconds : '' + seconds;
-      var progress = (audio.currentTime / this.state.duration) * 100;
+      var progress = (time / this.state.duration) * 100;
       this.setState({ 
         position: minutes + ':' + seconds,
-        seconds: Math.floor(audio.currentTime),
+        seconds: Math.floor(time),
         progress: progress
       })
     }.bind(this));
 
-    audio.addEventListener('playing', function(){
-      this.setState({ playing: true });
-    }.bind(this));
-
-    audio.addEventListener('pause', function(){
-      this.setState({ playing: false });
+    bus.subscribe('audio.state', function(state)  {
+      this.setState({ playing: state === 'playing' });
     }.bind(this));
 
   },
   toggle: function(){
-    var audio = this.props.audio;
-    if (audio.paused) {
-      audio.play();
+    if (this.state.playing) {
+      bus.send('audio.ctrl.pause');
     } else {
-      audio.pause();
+      bus.send('audio.ctrl.play');
     }
   },
   render: function(){
-    var track = this.props.track;
+    var track = this.state.track;
+    if (!track) {
+      return React.DOM.div({className: "audio-control"}, 
+        React.DOM.p(null, "no track"), 
+        AudioPlayerSwitcher(null)
+      );
+    }
+
     var playing = this.state.playing;
+    var progress = this.state.progress;
+    var position = this.state.position;
+
     var classes = cx({
       'current-track' : true,
       'playing': playing
@@ -269,25 +240,28 @@ var CurrentTrack = React.createClass({displayName: 'CurrentTrack',
       'icon-pause' : playing
     });
     var progressMarkerStyle = {
-      left: '' + this.state.progress + '%'
+      left: '' + progress + '%'
     };
-    return React.DOM.div({className: classes}, 
-      React.DOM.div({className: "toggle", onClick: this.toggle}, 
-        React.DOM.span({className: iconClasses})
-      ), 
-      React.DOM.div({className: "position"}, this.state.position), 
-      React.DOM.div({className: "what"}, 
-        React.DOM.span({className: "artist"}, track.artist), 
-        React.DOM.span({className: "title"}, track.name)
-      ), 
-      React.DOM.div({className: "progress"}, 
-        React.DOM.div({className: "marker", style: progressMarkerStyle})
+    return React.DOM.div({className: "audio-control"}, 
+      React.DOM.div({className: classes}, 
+        React.DOM.div({className: "toggle", onClick: this.toggle}, 
+          React.DOM.span({className: iconClasses})
+        ), 
+        React.DOM.div({className: "position"}, position), 
+        React.DOM.div({className: "what"}, 
+          React.DOM.span({className: "artist"}, track.artist), 
+          React.DOM.span({className: "title"}, track.name)
+        ), 
+        React.DOM.div({className: "progress"}, 
+          React.DOM.div({className: "marker", style: progressMarkerStyle})
+        ), 
+        AudioPlayerSwitcher(null)
       )
     );
   }
 });
 
-var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
+var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
   getInitialState: function() {
     return {
       albums: []
@@ -295,7 +269,7 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
   },
   getDefaultProps: function(){
     return {
-      renderPage: function(){}.bind(this)
+      renderDetail: function(){}.bind(this)
     };
   },
   componentDidMount: function(){
@@ -304,29 +278,26 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
       this.setState({ albums: res.body.albums });
     }.bind(this));
 
-    page('/', function(req){
+    page('/', function(req)  {
       window.location = '/albums';
-    }.bind(this));
+    });
 
-    page('/albums', function(req){
+    page('/albums', function(req)  {
       this.setProps({
-        renderPage: function(){
-          return React.DOM.div(null);
-        }.bind(this)
+        renderDetail: function()  {return React.DOM.div(null);}
       });
     }.bind(this));
 
-    page(new RegExp("\/albums\/(.+)"), function(req){
+    page(new RegExp("\/albums\/(.+)"), function(req)  {
       var name = req.params[0];
-      superagent.get('/api/albums/' + encodeURIComponent(name), function(res) {
-        this.setState({ album: res.body });
+      superagent.get('/api/albums/' + encodeURIComponent(name), function(res)  {
+        var album = res.body;
+        this.setProps({
+          renderDetail: function()  {
+            if (album) return TracksView({title: album.name, tracks: album.tracks});
+          }
+        });
       }.bind(this));
-      this.setProps({
-        renderPage: function(){
-          var album = this.state.album;
-          if (album) return AlbumDetail({album: album});
-        }.bind(this)
-      });
     }.bind(this));
 
     page.start();
@@ -335,10 +306,97 @@ var MediaPlayer = React.createClass({displayName: 'MediaPlayer',
   render: function(){
     return React.DOM.div(null, 
       AlbumList({albums: this.state.albums}), 
-      this.props.renderPage(), 
-      AudioPlayer(null)
+      this.props.renderDetail(), 
+      AudioControl(null)
     );
   }
 });
 
-React.renderComponent(MediaPlayer(null), document.getElementById('main'));
+var AudioStatus = React.createClass({displayName: 'AudioStatus',
+  getInitialState: function(){
+    return {
+      track: null,
+      playing: false,
+      position: '--:--',
+      duration: 0
+    }
+  },
+  componentDidMount: function(){
+
+    bus.subscribe('audio.track', function(track)  {
+      this.setState({ track: track });
+    }.bind(this));
+
+    bus.subscribe('audio.duration', function(duration)  {
+      this.setState({ duration: duration });
+    }.bind(this));
+
+    bus.subscribe('audio.time', function(time)  {
+      var minutes = Math.floor(time / 60);
+      var seconds = Math.floor(time - minutes * 60);
+      minutes = minutes < 10 ? '0' + minutes : '' + minutes;
+      seconds = seconds < 10 ? '0' + seconds : '' + seconds;
+      var progress = (time / this.state.duration) * 100;
+      this.setState({ 
+        position: minutes + ':' + seconds,
+        seconds: Math.floor(time),
+        progress: progress
+      })
+    }.bind(this));
+
+    bus.subscribe('audio.state', function(state)  {
+      this.setState({ playing: state === 'playing' });
+    }.bind(this));
+
+  },
+  render: function(){
+    var track = this.state.track;
+    if (!track) {
+      return React.DOM.div({className: "audio-status"}, 
+        React.DOM.p(null, "no track")
+      );
+    }
+
+    var playing = this.state.playing;
+    var progress = this.state.progress;
+    var position = this.state.position;
+
+    var classes = cx({
+      'current-track' : true,
+      'playing': playing
+    });
+    var iconClasses = cx({
+      'icon': true,
+      'icon-play' : !playing,
+      'icon-pause' : playing
+    });
+    var progressMarkerStyle = {
+      left: '' + progress + '%'
+    };
+    return React.DOM.div({className: "audio-status"}, 
+      React.DOM.div({className: classes}, 
+        React.DOM.div({className: "position"}, position), 
+        React.DOM.div({className: "what"}, 
+          React.DOM.span({className: "artist"}, track.artist), 
+          React.DOM.span({className: "title"}, track.name)
+        ), 
+        React.DOM.div({className: "progress"}, 
+          React.DOM.div({className: "marker", style: progressMarkerStyle})
+        )
+      )
+    );
+  }
+});
+
+var RemotePlayer = React.createClass({displayName: 'RemotePlayer',
+  render: function(){
+    return AudioStatus(null);
+  }
+});
+
+if (location.pathname === '/player') {
+  document.querySelector('body').className = 'full';
+  React.renderComponent(RemotePlayer(null), document.getElementById('main'));
+} else {
+  React.renderComponent(MusicBrowser(null), document.getElementById('main'));
+}
