@@ -274,7 +274,7 @@ var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
   },
   componentDidMount: function(){
 
-    superagent.get('/api/albums', function(res) {
+    superagent.get('/api/albums', function(res)  {
       this.setState({ albums: res.body.albums });
     }.bind(this));
 

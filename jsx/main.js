@@ -274,9 +274,9 @@ var MusicBrowser = React.createClass({
   },
   componentDidMount: function(){
 
-    superagent.get('/api/albums', function(res) {
+    superagent.get('/api/albums', res => {
       this.setState({ albums: res.body.albums });
-    }.bind(this));
+    });
 
     page('/', req => {
       window.location = '/albums';
@@ -293,9 +293,7 @@ var MusicBrowser = React.createClass({
       superagent.get('/api/albums/' + encodeURIComponent(name), res => {
         var album = res.body;
         this.setProps({
-          renderDetail: () => {
-            if (album) return <TracksView title={album.name} tracks={album.tracks}/>;
-          }
+          renderDetail: () => <TracksView title={album.name} tracks={album.tracks}/>;
         });
       });
     });

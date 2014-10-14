@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	//"sync"
 	"sync/atomic"
 )
 
