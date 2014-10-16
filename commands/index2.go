@@ -24,6 +24,39 @@ func Index2(root string) {
 
 	mapping := bleve.NewIndexMapping()
 
+	defaultMapping := bleve.NewDocumentMapping()
+
+	kwFields := []string{
+		"artist",
+		"title",
+		"album",
+		"albumartist",
+		"composer",
+		"label",
+		"filetype",
+	}
+
+	numericFields := []string{
+		"length",
+		"bitrate",
+		"samplerate",
+		"channels",
+	}
+
+	kwFieldMapping := bleve.NewTextFieldMapping()
+	kwFieldMapping.Analyzer = "keyword"
+	kwFieldMapping.Store = false
+	for _, kw := range kwFields {
+		defaultMapping.AddFieldMappingsAt("kw_"+kw, kwFieldMapping)
+	}
+
+	numFieldMapping := bleve.NewNumericFieldMapping()
+	for _, f := range numericFields {
+		defaultMapping.AddFieldMappingsAt(f, numFieldMapping)
+	}
+
+	mapping.DefaultMapping = defaultMapping
+
 	var index bleve.Index
 	index, err := bleve.New(dbpath, mapping)
 	if err != nil {
@@ -64,6 +97,10 @@ func Index2(root string) {
 			props["bitrate"] = strconv.Itoa(audioProps.Bitrate)
 			props["samplerate"] = strconv.Itoa(audioProps.Samplerate)
 			props["channels"] = strconv.Itoa(audioProps.Channels)
+
+			for _, kw := range kwFields {
+				props["kw_"+kw] = props[kw]
+			}
 
 			batch.Index(path, props)
 

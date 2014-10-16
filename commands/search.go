@@ -1,9 +1,10 @@
 package commands
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve"
+	//	"github.com/blevesearch/bleve/search"
 	"log"
 	"os"
 )
@@ -20,17 +21,47 @@ func Search(q string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	kwFields := []string{
+		"artist",
+		"title",
+		"album",
+		"albumartist",
+		"composer",
+		"label",
+		"filetype",
+	}
 	query := bleve.NewMatchQuery(q)
-	search := bleve.NewSearchRequest(query)
-	searchResults, err := index.Search(search)
+	s := bleve.NewSearchRequest(query)
+	s.Fields = []string{"*"}
+	for _, kw := range kwFields {
+		kwFacet := bleve.NewFacetRequest("kw_"+kw, 10)
+		s.AddFacet(kw, kwFacet)
+	}
+	res, err := index.Search(s)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("results: %s\n", searchResults)
+	fmt.Printf("results: %s\n", res)
 
-	//b, _ := json.MarshalIndent(searchResults, "", " ")
+	b, _ := json.MarshalIndent(res, "", " ")
 
-	//fmt.Printf("results: %s\n", string(b))
+	fmt.Printf("results: %s\n", string(b))
+
+	for _, hit := range res.Hits {
+		fmt.Printf("hit: %s\nfields = %s\n\n", hit.ID, hit.Fields)
+
+		for k, v := range hit.Fields {
+			fmt.Printf("field: %s => %s\n", k, v)
+		}
+	}
+
+	for name, facet := range res.Facets {
+		fmt.Printf("--------- %s\n", name)
+		for _, tf := range facet.Terms {
+			fmt.Printf("%s: %d\n", tf.Term, tf.Count)
+		}
+	}
+
+	fmt.Printf("\n--------------\ntotal: %d\n", res.Total)
 
 }
