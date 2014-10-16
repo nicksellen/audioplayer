@@ -1,5 +1,7 @@
 package main
 
+// -tags leveldb icu libstemmer
+
 import (
 	"github.com/codegangsta/cli"
 	"mediaplayer/commands"
@@ -7,6 +9,7 @@ import (
 )
 
 func main() {
+
 	app := cli.NewApp()
 
 	app.Name = "mediaplayer"
@@ -18,6 +21,20 @@ func main() {
 			Usage: "index a path",
 			Action: func(c *cli.Context) {
 				commands.Index(c.Args()[0])
+			},
+		},
+		{
+			Name:  "index2",
+			Usage: "index2 a path",
+			Action: func(c *cli.Context) {
+				commands.Index2(c.Args()[0])
+			},
+		},
+		{
+			Name:  "search",
+			Usage: "search",
+			Action: func(c *cli.Context) {
+				commands.Search(c.Args()[0])
 			},
 		},
 		{

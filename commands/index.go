@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync/atomic"
 )
@@ -17,13 +16,11 @@ type WalkFunc2 func(path string)
 
 func Index(root string) {
 
-	runtime.GOMAXPROCS(1)
-
 	fmt.Printf("importing from %s\n", root)
 
 	//os.Remove("./db")
 
-	db, err := sql.Open("sqlite3", "./db")
+	db, err := sql.Open("sqlite3", "./db.sqlite3")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,7 +100,7 @@ func Index(root string) {
 	var filecount uint32 = 0
 	var processedcount uint32 = 0
 
-	Walk(root, func(path string) {
+	IndexWalk(root, func(path string) {
 		atomic.AddUint32(&filecount, 1)
 		track, err := taglib.Read(root + path)
 		atomic.AddUint32(&processedcount, 1)
@@ -169,7 +166,7 @@ func Index(root string) {
 	fmt.Fprintf(os.Stderr, "%d/%d\n", atomic.LoadUint32(&processedcount), atomic.LoadUint32(&filecount))
 }
 
-func Walk(root string, fn WalkFunc2) {
+func IndexWalk(root string, fn WalkFunc2) {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			path := strings.TrimPrefix(path, root)

@@ -71,7 +71,7 @@ type WebsocketConnection struct {
 
 func Server() {
 
-	db, err := sql.Open("sqlite3", "./db")
+	db, err := sql.Open("sqlite3", "./db.sqlite3")
 	if err != nil {
 		log.Fatal(err)
 	}
