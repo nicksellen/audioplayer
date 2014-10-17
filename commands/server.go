@@ -101,14 +101,14 @@ func Server() {
 			log.Fatal(err)
 		}
 		defer rows.Close()
+		err = rows.Err()
+		if err != nil {
+			log.Fatal(err)
+		}
 		for rows.Next() {
 			var name string
 			rows.Scan(&name)
 			artists = append(artists, Artist{Name: name})
-		}
-		err = rows.Err()
-		if err != nil {
-			log.Fatal(err)
 		}
 		artistList := ArtistList{Artists: artists}
 		b, err := json.Marshal(artistList)

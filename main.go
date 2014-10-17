@@ -4,7 +4,7 @@ package main
 
 import (
 	"github.com/codegangsta/cli"
-	"mediaplayer/commands"
+	"github.com/nicksellen/audioplayer/commands"
 	"os"
 )
 
@@ -21,6 +21,20 @@ func main() {
 			Usage: "index a path",
 			Action: func(c *cli.Context) {
 				commands.Index(c.Args()[0])
+			},
+		},
+		{
+			Name:  "import",
+			Usage: "import a local folder",
+			Action: func(c *cli.Context) {
+				commands.Import(c.Args()[0])
+			},
+		},
+		{
+			Name:  "process",
+			Usage: "process",
+			Action: func(c *cli.Context) {
+				commands.ProcessFiles()
 			},
 		},
 		{
