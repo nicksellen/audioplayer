@@ -293,7 +293,7 @@ var MusicBrowser = React.createClass({
       superagent.get('/api/albums/' + encodeURIComponent(name), res => {
         var album = res.body;
         this.setProps({
-          renderDetail: () => <TracksView title={album.name} tracks={album.tracks}/>;
+          renderDetail: () => <TracksView title={album.name} tracks={album.tracks}/>
         });
       });
     });
@@ -323,6 +323,7 @@ var AudioStatus = React.createClass({
 
     bus.subscribe('audio.track', track => {
       this.setState({ track: track });
+      document.title = track.artist + ' - ' + track.name;
     });
 
     bus.subscribe('audio.duration', duration => {
