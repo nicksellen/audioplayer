@@ -5,6 +5,7 @@ package main
 import (
 	"github.com/codegangsta/cli"
 	"github.com/nicksellen/audioplayer/commands"
+	"github.com/nicksellen/audioplayer/commands/server"
 	"os"
 )
 
@@ -63,6 +64,13 @@ func main() {
 			Usage: "run a server",
 			Action: func(c *cli.Context) {
 				commands.Server()
+			},
+		},
+		{
+			Name:  "http",
+			Usage: "run http server to serve audio files and library json",
+			Action: func(c *cli.Context) {
+				server.Server2()
 			},
 		},
 	}

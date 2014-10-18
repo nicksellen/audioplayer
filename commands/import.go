@@ -43,6 +43,7 @@ func Import(importdir string) {
       change_hash text,
       store_id    integer,
       path        text,
+      dir_hash    text,
       format      text,
       size        integer,
       lastmod_at  integer,
@@ -102,10 +103,10 @@ func Import(importdir string) {
 
 	insertFileSql, err := tx.Prepare(`
     insert or replace into files
-      (id, store_id, change_hash, track_hash, path, format, 
+      (id, store_id, change_hash, track_hash, path, dir_hash, format, 
        size, lastmod_at, lastseen_at, added_at, updated_at, meta, audio_meta) 
     values
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 	if err != nil {
 		log.Fatal(err)
@@ -172,7 +173,9 @@ func Import(importdir string) {
 			format := strings.ToLower(filepath.Ext(path))
 			format = format[0 : len(format)-2]
 
-			_, err = insertFileSql.Exec(fileId, storeId, changeHash, trackHash, path, format,
+			dirHash := StringToSHA1(filepath.Dir(path))
+
+			_, err = insertFileSql.Exec(fileId, storeId, changeHash, trackHash, path, dirHash, format,
 				info.Size(), info.ModTime().Unix(), now, addedAt, now, tagdata, audiodata)
 			if err != nil {
 				log.Fatal(err)
@@ -260,8 +263,16 @@ func CalculateTrackHash(props map[string]string) string {
 
 	h := sha1.New()
 
-	parts := strings.SplitN(props["tracknumber"], "/", 2)
-	tracknumber := parts[0]
+	trackparts := strings.SplitN(props["tracknumber"], "/", 2)
+	tracknumber := trackparts[0]
+
+	discparts := strings.SplitN(props["discnumber"], "/", 2)
+	discnumber := discparts[0]
+
+	if discnumber == "1" {
+		// discnumber 1 is implicitly the case...
+		discnumber = ""
+	}
 
 	empty := true
 
@@ -271,6 +282,7 @@ func CalculateTrackHash(props map[string]string) string {
 		props["album"],
 		props["date"],
 		tracknumber,
+		discnumber, // will be blank for most things
 	}
 
 	for _, s := range values {
