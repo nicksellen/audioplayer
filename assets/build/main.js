@@ -184,8 +184,11 @@ var AudioControl = React.createClass({displayName: 'AudioControl',
   },
   componentDidMount: function(){
 
+    document.title = 'no track selected';
+
     bus.subscribe('audio.track', function(track)  {
       this.setState({ track: track });
+      document.title = track.name + ' by ' + track.artist;
     }.bind(this));
 
     bus.subscribe('audio.duration', function(duration)  {
@@ -293,9 +296,7 @@ var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
       superagent.get('/api/albums/' + encodeURIComponent(name), function(res)  {
         var album = res.body;
         this.setProps({
-          renderDetail: function()  {
-            if (album) return TracksView({title: album.name, tracks: album.tracks});
-          }
+          renderDetail: function()  {return TracksView({title: album.name, tracks: album.tracks});}
         });
       }.bind(this));
     }.bind(this));
@@ -323,8 +324,11 @@ var AudioStatus = React.createClass({displayName: 'AudioStatus',
   },
   componentDidMount: function(){
 
+    document.title = 'no track selected';
+
     bus.subscribe('audio.track', function(track)  {
       this.setState({ track: track });
+      document.title = track.name + ' by ' + track.artist;
     }.bind(this));
 
     bus.subscribe('audio.duration', function(duration)  {
