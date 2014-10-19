@@ -57,9 +57,17 @@ var AlbumList = React.createClass({
         {this.props.albums.filter(this.filter).map(album => {
           var key = [album.name, album.artists].join('::');
           var url = "/albums/" + encodeURIComponent(album.name);
-          return <li key={key}>
+          var classes = cx({
+            incomplete: album.incomplete,
+            complete: album.trackcount === album.totaltracks
+          });
+          return <li key={key} className={classes}>
             <a href={url}>
-              <span className="artists">{album.artists}</span>
+              <span className="artists">
+                {album.albumartists}
+                {album.albumartists && album.artists && ' - '}
+                {album.artists}
+              </span>
               <span className="name">{album.name}</span>
             </a>
           </li>;

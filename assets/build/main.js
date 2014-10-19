@@ -57,9 +57,17 @@ var AlbumList = React.createClass({displayName: 'AlbumList',
         this.props.albums.filter(this.filter).map(function(album)  {
           var key = [album.name, album.artists].join('::');
           var url = "/albums/" + encodeURIComponent(album.name);
-          return React.DOM.li({key: key}, 
+          var classes = cx({
+            incomplete: album.incomplete,
+            complete: album.trackcount === album.totaltracks
+          });
+          return React.DOM.li({key: key, className: classes}, 
             React.DOM.a({href: url}, 
-              React.DOM.span({className: "artists"}, album.artists), 
+              React.DOM.span({className: "artists"}, 
+                album.albumartists, 
+                album.albumartists && album.artists && ' - ', 
+                album.artists
+              ), 
               React.DOM.span({className: "name"}, album.name)
             )
           );
@@ -184,11 +192,8 @@ var AudioControl = React.createClass({displayName: 'AudioControl',
   },
   componentDidMount: function(){
 
-    document.title = 'no track selected';
-
     bus.subscribe('audio.track', function(track)  {
       this.setState({ track: track });
-      document.title = track.name + ' by ' + track.artist;
     }.bind(this));
 
     bus.subscribe('audio.duration', function(duration)  {
@@ -324,11 +329,9 @@ var AudioStatus = React.createClass({displayName: 'AudioStatus',
   },
   componentDidMount: function(){
 
-    document.title = 'no track selected';
-
     bus.subscribe('audio.track', function(track)  {
       this.setState({ track: track });
-      document.title = track.name + ' by ' + track.artist;
+      document.title = track.artist + ' - ' + track.name;
     }.bind(this));
 
     bus.subscribe('audio.duration', function(duration)  {

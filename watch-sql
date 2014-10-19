@@ -1,0 +1,21 @@
+#!/bin/bash
+db=$1
+shift
+filename=$1
+shift
+
+# run it once...
+sqlite3 "$@" $db < $filename
+
+while inotifywait -qq -e modify -e moved_to -e move_self $filename; do 
+
+  # sometimes there is a little gap before the file is present
+  sleep 0.1
+
+  # clear the screen
+  printf "\033c"
+
+  # execute the query, passing additional options through
+  sqlite3 "$@" $db < $filename
+
+done

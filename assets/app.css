@@ -282,3 +282,11 @@ body.full {
 .audio-status .what .title {
   display:block;
 }
+
+li.incomplete {
+  opacity: 0.6;
+}
+
+li.complete {
+  background-color: #f5fff5;
+}

@@ -9,18 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 )
-
-type AlbumList struct {
-	Albums []Album `json:"albums"`
-}
-
-type Album struct {
-	Name    string `json:"name"`
-	Artists string `json:"artists"`
-}
 
 type AlbumDetails struct {
 	Name   string       `json:"name"`
@@ -49,9 +38,134 @@ type TrackDetails struct {
 	Formats []string `json:"formats"`
 }
 
+type AlbumListResult struct {
+	Albums []DBAlbum `json:"albums"`
+}
+
+type DBAlbum struct {
+	Name        *sql.NullString `db:"album"`
+	AlbumArtist *sql.NullString
+	Artists     *sql.NullString
+	TrackCount  *sql.NullInt64
+	TotalTracks *sql.NullInt64
+	DiscNumber  *sql.NullInt64
+	TotalDiscs  *sql.NullInt64
+	Year        *sql.NullInt64
+	ToYear      *sql.NullInt64
+	Incomplete  *sql.NullBool
+}
+
+func (a *DBAlbum) ToAlbum() *Album {
+	return &Album{
+		maybeNullString(a.Name),
+		maybeNullString(a.AlbumArtist),
+		maybeNullString(a.Artists),
+		maybeNullInt64(a.TrackCount),
+		maybeNullInt64(a.TotalTracks),
+		maybeNullInt64(a.DiscNumber),
+		maybeNullInt64(a.TotalDiscs),
+		maybeNullInt64(a.Year),
+		maybeNullInt64(a.ToYear),
+		maybeNullBool(a.Incomplete),
+	}
+}
+
+func (a *DBAlbum) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.ToAlbum())
+}
+
+type Album struct {
+	Name        string `json:"name,omitempty"`
+	AlbumArtist string `json:"albumartists,omitempty"`
+	Artists     string `json:"artists,omitempty"`
+	TrackCount  int64  `json:"trackcount,omitempty"`
+	TotalTracks int64  `json:"totaltracks,omitempty"`
+	DiscNumber  int64  `json:"discnumber,omitempty"`
+	TotalDiscs  int64  `json:"totaldiscs,omitempty"`
+	Year        int64  `json:"year,omitempty"`
+	ToYear      int64  `json:"toyear,omitempty"`
+	Incomplete  bool   `json:"incomplete,omitempty"`
+}
+
+type TrackListResult struct {
+	Tracks []DBTrack `json:"tracks"`
+}
+
+type DBTrack struct {
+	Id          int64
+	TrackHash   *sql.NullString `db:"track_hash"`
+	Title       *sql.NullString
+	Artist      *sql.NullString
+	Album       *sql.NullString
+	AlbumArtist *sql.NullString
+
+	Composer    *sql.NullString
+	Label       *sql.NullString
+	Compilation *sql.NullString
+	Year        *sql.NullInt64
+
+	TrackNumber *sql.NullInt64
+	TotalTracks *sql.NullInt64
+	DiscNumber  *sql.NullInt64
+	TotalDiscs  *sql.NullInt64
+
+	AlbumSort       *sql.NullString
+	AlbumArtistSort *sql.NullString
+	ArtistSort      *sql.NullString
+	TitleSort       *sql.NullString
+}
+
+func (t *DBTrack) ToTrack() *Track {
+	return &Track{
+		t.Id,
+		maybeNullString(t.TrackHash),
+		maybeNullString(t.Title),
+		maybeNullString(t.Artist),
+		maybeNullString(t.Album),
+		maybeNullString(t.AlbumArtist),
+		maybeNullString(t.Composer),
+		maybeNullString(t.Label),
+		maybeNullString(t.Compilation),
+		maybeNullInt64(t.Year),
+		maybeNullInt64(t.TrackNumber),
+		maybeNullInt64(t.TotalTracks),
+		maybeNullInt64(t.DiscNumber),
+		maybeNullInt64(t.TotalDiscs),
+		maybeNullString(t.AlbumSort),
+		maybeNullString(t.AlbumArtistSort),
+		maybeNullString(t.ArtistSort),
+		maybeNullString(t.TitleSort),
+	}
+}
+
+func (t *DBTrack) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.ToTrack())
+}
+
+func maybeNullString(s *sql.NullString) string {
+	if s != nil && s.Valid {
+		return s.String
+	}
+	return ""
+}
+
+func maybeNullInt64(i *sql.NullInt64) int64 {
+	if i != nil && i.Valid {
+		return i.Int64
+	}
+	return 0
+}
+
+func maybeNullBool(b *sql.NullBool) bool {
+	if b != nil && b.Valid {
+		return b.Bool
+	}
+	return false
+}
+
 type Track struct {
-	Id          int    `json:"id,omitempty"`
-	TrackHash   string `json:"-" db:"track_hash"`
+	Id          int64  `json:"id,omitempty"`
+	TrackHash   string `json:"-"`
 	Title       string `json:"title,omitempty"`
 	Artist      string `json:"artist,omitempty"`
 	Album       string `json:"album,omitempty"`
@@ -60,12 +174,12 @@ type Track struct {
 	Composer    string `json:"composer,omitempty"`
 	Label       string `json:"label,omitempty"`
 	Compilation string `json:"compilation,omitempty"`
-	Year        int    `json:"year,omitempty"`
+	Year        int64  `json:"year,omitempty"`
 
-	TrackNumber int `json:"tracknumber,omitempty"`
-	TotalTracks int `json:"totaltracks,omitempty"`
-	DiscNumber  int `json:"discnumber,omitempty"`
-	TotalDiscs  int `json:"totaldiscs,omitempty"`
+	TrackNumber int64 `json:"tracknumber,omitempty"`
+	TotalTracks int64 `json:"totaltracks,omitempty"`
+	DiscNumber  int64 `json:"discnumber,omitempty"`
+	TotalDiscs  int64 `json:"totaldiscs,omitempty"`
 
 	AlbumSort       string `json:"albumsort,omitempty"`
 	AlbumArtistSort string `json:"albumartistsort,omitempty"`
@@ -101,7 +215,7 @@ func Server2() {
 
 	router.Handle("/api/tracks", NewTrackListHandler(sqlxdb))
 
-	router.Handle("/api/albums", NewAlbumListHandler(db))
+	router.Handle("/api/albums", NewAlbumListHandler(sqlxdb))
 	router.Handle("/api/albums/{name:.+}", NewAlbumGetHandler(db, "name"))
 	router.Handle("/audio/{id:[0-9]+}.{format}", NewAudioHandler(db, "id")).Methods("GET")
 
@@ -109,19 +223,6 @@ func Server2() {
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
-}
-
-func FormatToContentType(format string) string {
-	format = strings.ToLower(format)
-	switch format {
-	case "mp3":
-		return "audio/mpeg"
-	case "m4a", "mp4":
-		return "audio/mp4"
-	default:
-		log.Fatalf("unknown format %s", format)
-	}
-	return ""
 }
 
 func NewTrackListHandler(db *sqlx.DB) *TrackListHandler {
@@ -136,7 +237,7 @@ func NewAlbumGetHandler(db *sql.DB, nameParam string) *AlbumGetHandler {
 	return &AlbumGetHandler{db: db, nameParam: nameParam}
 }
 
-func NewAlbumListHandler(db *sql.DB) *AlbumListHandler {
+func NewAlbumListHandler(db *sqlx.DB) *AlbumListHandler {
 	return &AlbumListHandler{db: db}
 }
 
@@ -144,13 +245,9 @@ type TrackListHandler struct {
 	db *sqlx.DB
 }
 
-type TrackListResult struct {
-	Tracks []Track `json:"tracks"`
-}
-
 func (h *TrackListHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	tracks := []Track{}
+	tracks := []DBTrack{}
 	err := h.db.Select(&tracks, "select * from tracks")
 	if err != nil {
 		log.Fatal(err)
@@ -162,69 +259,101 @@ func (h *TrackListHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Write(b)
 }
 
-type AudioHandler struct {
-	db      *sql.DB
-	idParam string
-}
-
-func (h *AudioHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	id, err := strconv.ParseInt(vars[h.idParam], 10, 64)
-	format := vars["format"]
-	if err != nil {
-		log.Fatal(err)
-	}
-	row := h.db.QueryRow(`
-      select t.title, f.path, s.name
-      from tracks t
-      left join files f on f.track_id = t.id
-      left join stores s on f.store_id = s.id
-      where t.id = ? and f.format = ?
-      limit 1
-    `, id, format)
-	var title string
-	var path string
-	var store string
-	err = row.Scan(&title, &path, &store)
-	if err != nil {
-		log.Fatal(err)
-	}
-	w.Header().Set("Content-Type", FormatToContentType(path[len(path)-3:]))
-	http.ServeFile(w, req, store+path)
-}
-
 type AlbumListHandler struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 func (h *AlbumListHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	albums := []Album{}
-	rows, err := h.db.Query(`
+	albums := []DBAlbum{}
+	err := h.db.Select(&albums, `
+  
+    -- woah looks hairy eh? take a deep breath...
+
+    select
+      coalesce(albumartist, 'Various Artists') as albumartist,
+      nullif(artists, albumartist) as artists,
+      album,
+
+      sum(trackcount) as trackcount,
+      min(totaltracks) as totaltracks,
+      min(discnumber) as discnumber,
+      min(totaldiscs) as totaldiscs,
+      min(year) as year,
+      max(toyear) as toyear,
+
+      -- very basic metric of incompleteness
+      min(mintracknumber) != 1 as incomplete 
+
+    from (
+
       select 
-        album, 
-        group_concat(distinct artist) as artists 
-      from tracks 
-      where album is not null and album != ''
-      group by album 
-      order by lower(album)
-    `)
+
+        -- we want the albumartist
+        -- we might be able to generate it
+        -- if all the tracks have the same artist
+        coalesce(
+          t.albumartist, 
+          (case count(distinct t.artist)
+            when 1 then t.artist
+            else null -- meaning various
+          end)
+        ) as albumartist,
+
+        -- include a mention all the other artists
+        group_concat(distinct nullif(t.artist, t.albumartist)) as artists,
+
+        t.album, 
+
+        min(t.discnumber) as discnumber,
+        min(t.totaldiscs) as totaldiscs,
+
+        min(t.totaltracks) as totaltracks,
+        count(distinct t.id) as trackcount,
+
+        min(year) year,
+        nullif(max(year), min(year)) toyear,
+
+        min(t.tracknumber) as mintracknumber
+
+      from tracks t 
+      join files f on t.track_hash = f.track_hash
+
+      where 
+        t.album is not null
+        and t.artist is not null
+        and t.title is not null
+
+        -- a few cases I wanted to peek at manually
+
+        --and t.album = 'One'
+        --and t.album = 'Good Rain'
+        --and t.album = 'Lontano'
+        --and t.album like 'Always Outnumbered%'
+        --and t.album like 'Angola - The greatest%'
+
+      group by t.album, t.albumartist
+
+    ) q
+
+    --where trackcount = totaltracks
+
+    -- regroup as our inner query may have successfully
+    -- found an albumartist from the chaos and it might be able
+    -- to be paired up with it's siblings
+    group by album, albumartist
+
+    --order by albumartist, album
+    order by album
+
+    ;
+
+
+  `)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var album string
-		var artists string
-		rows.Scan(&album, &artists)
-		albums = append(albums, Album{Name: album, Artists: artists})
-	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
-	albumList := AlbumList{Albums: albums}
-	b, err := json.Marshal(albumList)
+	b, err := json.Marshal(&AlbumListResult{Albums: albums})
 	if err != nil {
 		log.Fatal(err)
 	}

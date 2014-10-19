@@ -45,7 +45,7 @@ func ProcessFiles() {
 
 	_, err = db.Exec(`
 
-    drop tracks;
+    drop table if exists tracks;
 
     create table if not exists tracks (
 
@@ -255,41 +255,41 @@ func ProcessFiles() {
 		*/
 
 		insertTrackSql.Exec(
-			m["track_hash"],
-			m["title"],
-			m["artist"],
-			m["album"],
-			m["albumartist"],
-			m["composer"],
-			m["label"],
-			m["albumsort"],
-			m["albumartistsort"],
-			m["artistsort"],
-			m["titlesort"],
-			m["compilation"],
-			num(m["year"]),
-			num(m["tracknumber"]),
-			num(m["totaltracks"]),
-			num(m["discnumber"]),
-			num(m["totaldiscs"]))
+			nullString(m["track_hash"]),
+			nullString(m["title"]),
+			nullString(m["artist"]),
+			nullString(m["album"]),
+			nullString(m["albumartist"]),
+			nullString(m["composer"]),
+			nullString(m["label"]),
+			nullString(m["albumsort"]),
+			nullString(m["albumartistsort"]),
+			nullString(m["artistsort"]),
+			nullString(m["titlesort"]),
+			nullString(m["compilation"]),
+			nullInt64(m["year"]),
+			nullInt64(m["tracknumber"]),
+			nullInt64(m["totaltracks"]),
+			nullInt64(m["discnumber"]),
+			nullInt64(m["totaldiscs"]))
 	}
 
 	tx.Commit()
-
 }
-func num(val string) int {
+
+func nullString(val string) *sql.NullString {
+	return &sql.NullString{val, val != ""}
+}
+
+func nullInt64(val string) *sql.NullInt64 {
 	if val != "" {
-		n, err := strconv.Atoi(val)
+		n, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			log.Fatal(err)
 		}
-		return n
+		return &sql.NullInt64{n, true}
 	}
-	// this would ideally be nil
-	// the db is happy with that
-	// but loading at the other end with sqlx doesn't like it
-	// TODO: I think I need to stop using sqlx for this....
-	return 0
+	return &sql.NullInt64{0, false}
 }
 
 func enforceNum(m map[string]string, key string) {
