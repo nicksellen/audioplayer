@@ -169,7 +169,9 @@ func ProcessAlbums() {
 
 			merge := false
 
-			if a.Artists != "" && a.Artists == b.Artists {
+			if a.AlbumArtist != "" && a.AlbumArtist == b.AlbumArtist {
+				merge = true
+			} else if a.Artists != "" && a.Artists == b.Artists {
 				merge = true
 			} else if a.Artists != "" && a.Artists == b.AlbumArtist {
 				a.AlbumArtist = a.Artists
@@ -181,20 +183,30 @@ func ProcessAlbums() {
 
 			} else if OneContainsTheOther(a.AlbumArtist, b.AlbumArtist) {
 				a.AlbumArtist = ShortestOf(a.AlbumArtist, b.AlbumArtist)
+				a.Artists = a.Artists + "," + b.Artists
 				merge = true
 			} else if OneContainsTheOther(a.AlbumArtist, b.Artists) {
 				a.AlbumArtist = b.AlbumArtist
+				a.Artists = a.Artists + "," + b.Artists
 				merge = true
 			} else if OneContainsTheOther(b.AlbumArtist, a.Artists) {
+				a.Artists = a.Artists + "," + b.Artists
 				merge = true
 			}
 
 			if merge {
 				a.Album = ShortestOf(a.Album, b.Album)
 				trackIds = trackIds + "," + e.TrackIds
+				a.TotalTracks = MinOf(a.TotalTracks, b.TotalTracks)
+				a.DiscNumber = MinOf(a.DiscNumber, b.DiscNumber)
+				a.TotalDiscs = MinOf(a.TotalDiscs, b.TotalDiscs)
+				a.Year = MinOf(a.Year, b.Year)
+				a.ToYear = MinOf(a.ToYear, b.ToYear)
+				fmt.Printf(" trackIds: %v\n", trackIds)
+				fmt.Printf("\n final: %#  v\n", pretty.Formatter(a))
 			}
 			fmt.Printf(" merge: %v\n", merge)
-			fmt.Printf(" trackIds: %v\n\n", trackIds)
+			fmt.Printf("\n\n")
 
 		} else {
 			m[s] = album
@@ -222,6 +234,13 @@ func OneContainsTheOther(a, b string) bool {
 
 func ShortestOf(a, b string) string {
 	if len(a) < len(b) && a != "" {
+		return a
+	}
+	return b
+}
+
+func MinOf(a, b int64) int64 {
+	if a < b && a != 0 {
 		return a
 	}
 	return b
