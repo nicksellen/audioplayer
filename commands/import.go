@@ -9,13 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nicksellen/audioplayer/processing"
 	"github.com/nicksellen/audiotags"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -137,7 +137,10 @@ func Import(importdir string) {
 
 		var existingChangeHash string
 		var addedAt int64
-		row := tx.QueryRow(`select change_hash, added_at from files where id = ?`, fileId).Scan(&existingChangeHash, &addedAt)
+		row := tx.QueryRow(`
+			select change_hash, added_at from files where id = ?
+		`, fileId).Scan(&existingChangeHash, &addedAt)
+
 		exists, err := SqlExists(tx, row)
 		if err != nil {
 			log.Fatal(err)
@@ -256,9 +259,6 @@ func CalculateChangeHash(path string, info os.FileInfo) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-var TRACK_HASH_RE = regexp.MustCompile("[':;\"*\\-_\\(\\)$&#@^,\\.\\?]")
-var MULTI_SPACE_RE = regexp.MustCompile("\\ \\ +")
-
 func CalculateTrackHash(props map[string]string) string {
 
 	h := sha1.New()
@@ -286,9 +286,8 @@ func CalculateTrackHash(props map[string]string) string {
 	}
 
 	for _, s := range values {
-		s = TRACK_HASH_RE.ReplaceAllLiteralString(s, "")
-		s = MULTI_SPACE_RE.ReplaceAllLiteralString(s, " ")
-		s = strings.TrimSpace(strings.ToLower(s))
+
+		s = processing.ToLowerWithoutPunctuation(s)
 
 		if s != "" {
 			empty = false

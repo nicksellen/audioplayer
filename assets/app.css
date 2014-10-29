@@ -283,6 +283,7 @@ body.full {
   display:block;
 }
 
+/*
 li.incomplete {
   opacity: 0.6;
 }
@@ -290,3 +291,4 @@ li.incomplete {
 li.complete {
   background-color: #f5fff5;
 }
+*/

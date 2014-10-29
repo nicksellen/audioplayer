@@ -6,6 +6,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/nicksellen/audioplayer/commands"
 	"github.com/nicksellen/audioplayer/commands/server"
+	"github.com/nicksellen/audioplayer/processing"
 	"os"
 )
 
@@ -26,7 +27,7 @@ func main() {
 		},
 		{
 			Name:  "import",
-			Usage: "import a local folder",
+			Usage: "import and process a local folder",
 			Action: func(c *cli.Context) {
 				commands.Import(c.Args()[0])
 			},
@@ -35,7 +36,8 @@ func main() {
 			Name:  "process",
 			Usage: "process",
 			Action: func(c *cli.Context) {
-				commands.ProcessFiles()
+				processing.ProcessTracks()
+				processing.ProcessAlbums()
 			},
 		},
 		{

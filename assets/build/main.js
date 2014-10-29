@@ -49,26 +49,26 @@ var AlbumList = React.createClass({displayName: 'AlbumList',
     return false;
   },
   render: function(){
-    return React.DOM.div({className: "album-list"}, 
-      React.DOM.div({className: "search"}, 
-        React.DOM.input({type: "text", placeholder: "search", onChange: this.filterChanged})
+    return React.createElement("div", {className: "album-list"}, 
+      React.createElement("div", {className: "search"}, 
+        React.createElement("input", {type: "text", placeholder: "search", onChange: this.filterChanged})
       ), 
-      React.DOM.ul(null, 
+      React.createElement("ul", null, 
         this.props.albums.filter(this.filter).map(function(album)  {
           var key = [album.name, album.artists].join('::');
-          var url = "/albums/" + encodeURIComponent(album.name);
+          var url = "/albums/" + encodeURIComponent(album.id);
           var classes = cx({
             incomplete: album.incomplete,
             complete: album.trackcount === album.totaltracks
           });
-          return React.DOM.li({key: key, className: classes}, 
-            React.DOM.a({href: url}, 
-              React.DOM.span({className: "artists"}, 
+          return React.createElement("li", {key: key, className: classes}, 
+            React.createElement("a", {href: url}, 
+              React.createElement("span", {className: "artists"}, 
                 album.albumartists, 
                 album.albumartists && album.artists && ' - ', 
                 album.artists
               ), 
-              React.DOM.span({className: "name"}, album.name)
+              React.createElement("span", {className: "name"}, album.name)
             )
           );
         })
@@ -110,25 +110,25 @@ var TracksView = React.createClass({displayName: 'TracksView',
     bus.send('audio.request-update');
   },
   render: function(){
-    return React.DOM.div({className: "album-detail"}, 
-      React.DOM.h2(null, this.props.title), 
-      React.DOM.table(null, 
-        React.DOM.tbody(null, 
+    return React.createElement("div", {className: "album-detail"}, 
+      React.createElement("h2", null, this.props.title), 
+      React.createElement("table", null, 
+        React.createElement("tbody", null, 
           this.props.tracks.map(function(track)  {
             var key = track.id;
             var classes = cx({
               'playing': !!track.playing
             });
-            return React.DOM.tr({key: key, className: classes, onClick: this.play.bind(this, track)}, 
-              React.DOM.td({width: "40px"}, 
-                React.DOM.a({className: "play-control"}, 
-                  React.DOM.span({className: "icon icon-play"})
+            return React.createElement("tr", {key: key, className: classes, onClick: this.play.bind(this, track)}, 
+              React.createElement("td", {width: "40px"}, 
+                React.createElement("a", {className: "play-control"}, 
+                  React.createElement("span", {className: "icon icon-play"})
                 )
               ), 
-              React.DOM.td({className: "pos", width: "40px"}, track.pos), 
-              React.DOM.td(null, track.name), 
-              React.DOM.td(null, track.artist), 
-              React.DOM.td({className: "formats", width: "80px"}, track.sources.map(function(source)  {return source.format;}).join(' '))
+              React.createElement("td", {className: "pos", width: "40px"}, track.pos), 
+              React.createElement("td", null, track.name), 
+              React.createElement("td", null, track.artist), 
+              React.createElement("td", {className: "formats", width: "80px"}, track.sources.map(function(source)  {return source.format;}).join(' '))
             );
           }.bind(this))
         )
@@ -143,7 +143,7 @@ var Track = React.createClass({displayName: 'Track',
   },
   render: function(){
     var track = this.props.track;
-    return React.DOM.div({onClick: this.play}, track.artist, " : ", track.name);
+    return React.createElement("div", {onClick: this.play}, track.artist, " : ", track.name);
   }
 });
 
@@ -170,12 +170,12 @@ var AudioPlayerSwitcher = React.createClass({displayName: 'AudioPlayerSwitcher',
     bus.unsubscribe(this.sub1, this.sub2);
   },
   render: function(){
-    return React.DOM.ul({className: "players"}, 
+    return React.createElement("ul", {className: "players"}, 
       this.state.players.map(function(player)  {
         var classes = cx({
           active: this.state.activePlayer === player
         })
-        return React.DOM.li({key: player, className: classes, onClick: this.setPlayer.bind(this, player)}, player);
+        return React.createElement("li", {key: player, className: classes, onClick: this.setPlayer.bind(this, player)}, player);
       }.bind(this))
     )
   }
@@ -228,9 +228,9 @@ var AudioControl = React.createClass({displayName: 'AudioControl',
   render: function(){
     var track = this.state.track;
     if (!track) {
-      return React.DOM.div({className: "audio-control"}, 
-        React.DOM.p(null, "no track"), 
-        AudioPlayerSwitcher(null)
+      return React.createElement("div", {className: "audio-control"}, 
+        React.createElement("p", null, "no track"), 
+        React.createElement(AudioPlayerSwitcher, null)
       );
     }
 
@@ -250,20 +250,20 @@ var AudioControl = React.createClass({displayName: 'AudioControl',
     var progressMarkerStyle = {
       left: '' + progress + '%'
     };
-    return React.DOM.div({className: "audio-control"}, 
-      React.DOM.div({className: classes}, 
-        React.DOM.div({className: "toggle", onClick: this.toggle}, 
-          React.DOM.span({className: iconClasses})
+    return React.createElement("div", {className: "audio-control"}, 
+      React.createElement("div", {className: classes}, 
+        React.createElement("div", {className: "toggle", onClick: this.toggle}, 
+          React.createElement("span", {className: iconClasses})
         ), 
-        React.DOM.div({className: "position"}, position), 
-        React.DOM.div({className: "what"}, 
-          React.DOM.span({className: "artist"}, track.artist), 
-          React.DOM.span({className: "title"}, track.name)
+        React.createElement("div", {className: "position"}, position), 
+        React.createElement("div", {className: "what"}, 
+          React.createElement("span", {className: "artist"}, track.artist), 
+          React.createElement("span", {className: "title"}, track.name)
         ), 
-        React.DOM.div({className: "progress"}, 
-          React.DOM.div({className: "marker", style: progressMarkerStyle})
+        React.createElement("div", {className: "progress"}, 
+          React.createElement("div", {className: "marker", style: progressMarkerStyle})
         ), 
-        AudioPlayerSwitcher(null)
+        React.createElement(AudioPlayerSwitcher, null)
       )
     );
   }
@@ -292,7 +292,7 @@ var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
 
     page('/albums', function(req)  {
       this.setProps({
-        renderDetail: function()  {return React.DOM.div(null);}
+        renderDetail: function()  {return React.createElement("div", null);}
       });
     }.bind(this));
 
@@ -301,7 +301,7 @@ var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
       superagent.get('/api/albums/' + encodeURIComponent(name), function(res)  {
         var album = res.body;
         this.setProps({
-          renderDetail: function()  {return TracksView({title: album.name, tracks: album.tracks});}
+          renderDetail: function()  {return React.createElement(TracksView, {title: album.name, tracks: album.tracks});}
         });
       }.bind(this));
     }.bind(this));
@@ -310,10 +310,10 @@ var MusicBrowser = React.createClass({displayName: 'MusicBrowser',
 
   },
   render: function(){
-    return React.DOM.div(null, 
-      AlbumList({albums: this.state.albums}), 
+    return React.createElement("div", null, 
+      React.createElement(AlbumList, {albums: this.state.albums}), 
       this.props.renderDetail(), 
-      AudioControl(null)
+      React.createElement(AudioControl, null)
     );
   }
 });
@@ -359,8 +359,8 @@ var AudioStatus = React.createClass({displayName: 'AudioStatus',
   render: function(){
     var track = this.state.track;
     if (!track) {
-      return React.DOM.div({className: "audio-status"}, 
-        React.DOM.p(null, "no track")
+      return React.createElement("div", {className: "audio-status"}, 
+        React.createElement("p", null, "no track")
       );
     }
 
@@ -380,15 +380,15 @@ var AudioStatus = React.createClass({displayName: 'AudioStatus',
     var progressMarkerStyle = {
       left: '' + progress + '%'
     };
-    return React.DOM.div({className: "audio-status"}, 
-      React.DOM.div({className: classes}, 
-        React.DOM.div({className: "position"}, position), 
-        React.DOM.div({className: "what"}, 
-          React.DOM.span({className: "artist"}, track.artist), 
-          React.DOM.span({className: "title"}, track.name)
+    return React.createElement("div", {className: "audio-status"}, 
+      React.createElement("div", {className: classes}, 
+        React.createElement("div", {className: "position"}, position), 
+        React.createElement("div", {className: "what"}, 
+          React.createElement("span", {className: "artist"}, track.artist), 
+          React.createElement("span", {className: "title"}, track.name)
         ), 
-        React.DOM.div({className: "progress"}, 
-          React.DOM.div({className: "marker", style: progressMarkerStyle})
+        React.createElement("div", {className: "progress"}, 
+          React.createElement("div", {className: "marker", style: progressMarkerStyle})
         )
       )
     );
@@ -397,13 +397,13 @@ var AudioStatus = React.createClass({displayName: 'AudioStatus',
 
 var RemotePlayer = React.createClass({displayName: 'RemotePlayer',
   render: function(){
-    return AudioStatus(null);
+    return React.createElement(AudioStatus, null);
   }
 });
 
 if (location.pathname === '/player') {
   document.querySelector('body').className = 'full';
-  React.renderComponent(RemotePlayer(null), document.getElementById('main'));
+  React.renderComponent(React.createElement(RemotePlayer, null), document.getElementById('main'));
 } else {
-  React.renderComponent(MusicBrowser(null), document.getElementById('main'));
+  React.renderComponent(React.createElement(MusicBrowser, null), document.getElementById('main'));
 }

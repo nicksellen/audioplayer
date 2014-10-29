@@ -56,7 +56,7 @@ var AlbumList = React.createClass({
       <ul>
         {this.props.albums.filter(this.filter).map(album => {
           var key = [album.name, album.artists].join('::');
-          var url = "/albums/" + encodeURIComponent(album.name);
+          var url = "/albums/" + encodeURIComponent(album.id);
           var classes = cx({
             incomplete: album.incomplete,
             complete: album.trackcount === album.totaltracks

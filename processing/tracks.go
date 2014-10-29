@@ -1,49 +1,19 @@
-package commands
+package processing
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"github.com/arbovm/levenshtein"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/nicksellen/audioplayer/models"
 	"log"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
-type FileEntry struct {
-	path      string
-	dirHash   string
-	meta      map[string]string
-	audioMeta map[string]int
-}
+func ProcessTracks() {
 
-type Track struct {
-	Id          int
-	track_hash  string
-	Title       string
-	Artist      string
-	Album       string
-	AlbumArtist string
-	Year        int
-	TrackNumber int
-	TrackCount  int
-	DiscNumber  int
-	DiscCount   int
-}
-
-type ConflictHandler func(string, string) string
-
-func ProcessFiles() {
-
-	db, err := sql.Open("sqlite3", "./db.v2.sqlite3")
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := OpenDB()
 	defer db.Close()
 
-	_, err = db.Exec(`
+	_, err := db.Exec(`
 
     drop table if exists tracks;
 
@@ -120,7 +90,7 @@ func ProcessFiles() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tr := make(map[string][]FileEntry)
+	tr := make(map[string][]models.FileEntry)
 	for rows.Next() {
 		var path string
 		var track_hash string
@@ -138,43 +108,44 @@ func ProcessFiles() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		var entries []FileEntry
+		var entries []models.FileEntry
 		if _, ok := tr[track_hash]; ok {
 			entries = tr[track_hash]
 		} else {
-			entries = []FileEntry{}
+			entries = []models.FileEntry{}
 		}
-		entries = append(entries, FileEntry{path: path, meta: meta, audioMeta: audioMeta})
+		entries = append(entries, models.FileEntry{Path: path, Meta: meta, AudioMeta: audioMeta})
 		tr[track_hash] = entries
 	}
 
 	// for each track
+
 	for th, entries := range tr {
-		//fmt.Printf("------------ %s %d--------------\n", th, len(entries))
 
 		m := make(map[string]string)
 
 		m["track_hash"] = th
 
 		// ...and each file that is of the track
+
 		for _, e := range entries {
 
-			propertyMerge(m, e.meta, "albumartist")
-			propertyMerge(m, e.meta, "artist")
-			propertyMerge(m, e.meta, "album")
-			propertyMerge(m, e.meta, "title")
-			propertyMerge(m, e.meta, "composer")
-			propertyMerge(m, e.meta, "compilation")
-			propertyMerge(m, e.meta, "label")
+			propertyMerge(m, e.Meta, "albumartist")
+			propertyMerge(m, e.Meta, "artist")
+			propertyMerge(m, e.Meta, "album")
+			propertyMerge(m, e.Meta, "title")
+			propertyMerge(m, e.Meta, "composer")
+			propertyMerge(m, e.Meta, "compilation")
+			propertyMerge(m, e.Meta, "label")
 
-			e.meta["year"] = e.meta["originaldate"]
-			if e.meta["year"] == "" {
-				e.meta["year"] = e.meta["date"]
+			e.Meta["year"] = e.Meta["originaldate"]
+			if e.Meta["year"] == "" {
+				e.Meta["year"] = e.Meta["date"]
 			}
 
-			e.meta["year"] = YEAR_RE.FindString(e.meta["year"])
+			e.Meta["year"] = YEAR_RE.FindString(e.Meta["year"])
 
-			propertyMergeWithConflictHandler(m, e.meta, "year", func(a string, b string) string {
+			propertyMergeWithPropertyConflictHandler(m, e.Meta, "year", func(a string, b string) string {
 				if a == "" {
 					return b
 				} else if b == "" {
@@ -196,14 +167,14 @@ func ProcessFiles() {
 				}
 			})
 
-			propertyMergeWithConflictHandler(m, e.meta, "tracknumber", func(a string, b string) string {
+			propertyMergeWithPropertyConflictHandler(m, e.Meta, "tracknumber", func(a string, b string) string {
 				if strings.Contains(a, "/") {
 					return a
 				}
 				return b
 			})
 
-			propertyMergeWithConflictHandler(m, e.meta, "discnumber", func(a string, b string) string {
+			propertyMergeWithPropertyConflictHandler(m, e.Meta, "discnumber", func(a string, b string) string {
 				if strings.Contains(a, "/") {
 					return a
 				}
@@ -234,25 +205,7 @@ func ProcessFiles() {
 			enforceNum(m, "totaltracks")
 			enforceNum(m, "discnumber")
 			enforceNum(m, "totaldiscs")
-
-			/*
-				// the meta from that file
-				for k, v := range e.meta {
-					fmt.Printf("    %s : %s\n", k, v)
-				}
-			*/
 		}
-
-		/*
-
-			fmt.Printf("  - final:\n")
-
-			for k, v := range m {
-				if v != "" {
-					fmt.Printf("    %s : %s\n", k, v)
-				}
-			}
-		*/
 
 		insertTrackSql.Exec(
 			nullString(m["track_hash"]),
@@ -275,70 +228,4 @@ func ProcessFiles() {
 	}
 
 	tx.Commit()
-}
-
-func nullString(val string) *sql.NullString {
-	return &sql.NullString{val, val != ""}
-}
-
-func nullInt64(val string) *sql.NullInt64 {
-	if val != "" {
-		n, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return &sql.NullInt64{n, true}
-	}
-	return &sql.NullInt64{0, false}
-}
-
-func enforceNum(m map[string]string, key string) {
-	if val, ok := m[key]; ok {
-		m[key] = NUM_RE.FindString(val)
-	}
-}
-
-var YEAR_RE = regexp.MustCompile("[0-9]{4}")
-var NUM_RE = regexp.MustCompile("[0-9]+")
-var CAP = regexp.MustCompile("[A-Z]")
-
-func propertyMergeWithConflictHandler(m1 map[string]string, m2 map[string]string, k string, resolver ConflictHandler) {
-	a := strings.TrimSpace(m1[k])
-	b := strings.TrimSpace(m2[k])
-	if a == b {
-		// easy
-	} else if b == "" {
-		// nothing to do m1 already contains a
-	} else if b != "" {
-		m1[k] = b
-	} else {
-		m1[k] = resolver(a, b)
-	}
-}
-
-func propertyMerge(m1 map[string]string, m2 map[string]string, k string) {
-	propertyMergeWithConflictHandler(m1, m2, k, func(a string, b string) string {
-		if EqualsCaseInsenstive(a, b) {
-			// the only difference is capitalization, use the one with the most capitalization
-			if CountOccurances(b, CAP) > CountOccurances(a, CAP) {
-				return b
-			}
-			return a
-		} else {
-			dist := levenshtein.Distance(a, b)
-			if dist < 3 {
-				return b
-			}
-		}
-		fmt.Printf("conflict: %s [%s] vs [%s]\n", k, a, b)
-		return a
-	})
-}
-
-func CountOccurances(s string, re *regexp.Regexp) int {
-	return len(re.FindAllString(s, -1))
-}
-
-func EqualsCaseInsenstive(a string, b string) bool {
-	return strings.ToLower(a) == strings.ToLower(b)
 }
