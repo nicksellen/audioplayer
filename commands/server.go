@@ -305,6 +305,7 @@ func Server() {
 			WebsocketBroadcast(wsconns, wsconn, messageType, m)
 		}
 	})
+  fmt.Printf("listening on 8089\n")
 	log.Fatal(http.ListenAndServe(":8089", nil))
 }
 
