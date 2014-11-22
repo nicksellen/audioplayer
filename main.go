@@ -41,6 +41,13 @@ func main() {
 			},
 		},
 		{
+			Name:  "process2",
+			Usage: "process2",
+			Action: func(c *cli.Context) {
+				processing.ProcessTracksAndAlbums()
+			},
+		},
+		{
 			Name:  "index2",
 			Usage: "index2 a path",
 			Action: func(c *cli.Context) {

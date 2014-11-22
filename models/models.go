@@ -12,11 +12,19 @@ type FileEntry struct {
 	AudioMeta map[string]int
 }
 
+func NewDBAlbum(album string, artist string) *DBAlbum {
+	return &DBAlbum{
+		Album:  &sql.NullString{album, true},
+		Artist: &sql.NullString{artist, true},
+	}
+}
+
 type DBAlbum struct {
 	Id          int64
 	Album       *sql.NullString `db:"album"`
-	AlbumArtist *sql.NullString
-	Artists     *sql.NullString
+	Artist      *sql.NullString
+	AlbumArtist *sql.NullString // TODO: remove
+	Artists     *sql.NullString // TODO: remove
 	TotalTracks *sql.NullInt64
 	DiscNumber  *sql.NullInt64
 	TotalDiscs  *sql.NullInt64
@@ -29,6 +37,7 @@ func (a *DBAlbum) FixNulls() *DBAlbum {
 	return &DBAlbum{
 		0,
 		ensureNullString(a.Album),
+		ensureNullString(a.Artist),
 		ensureNullString(a.AlbumArtist),
 		ensureNullString(a.Artists),
 		ensureNullInt64(a.TotalTracks),
@@ -44,6 +53,7 @@ func (a *DBAlbum) ToAlbum() *Album {
 	return &Album{
 		a.Id,
 		maybeNullString(a.Album),
+		maybeNullString(a.Artist),
 		maybeNullString(a.AlbumArtist),
 		maybeNullString(a.Artists),
 		maybeNullInt64(a.TotalTracks),
@@ -62,6 +72,7 @@ func (a *DBAlbum) MarshalJSON() ([]byte, error) {
 type Album struct {
 	Id          int64  `json:"id"`
 	Album       string `json:"name,omitempty"`
+	Artist      string `json:"artist,omitempty"`
 	AlbumArtist string `json:"albumartists,omitempty"`
 	Artists     string `json:"artists,omitempty"`
 	TotalTracks int64  `json:"totaltracks,omitempty"`

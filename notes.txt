@@ -1,0 +1,7 @@
+this one processes them together, which has to be the way :)
+
+previously we did tracks first, but we were making albums decisions
+without looking at the other tracks we had.
+
+we need to do it all together as it informs our decision on which 
+album to associate it with
