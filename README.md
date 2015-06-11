@@ -1,5 +1,4 @@
-audioplayer
-===========
+# audioplayer
 
 Work-in-progress audioplayer project.
 
@@ -12,8 +11,16 @@ The idea is to replace iTunes (+iTunes match) for me on my laptop/server/phone/w
 * it should allow remote players, so I can play it out my hifi without cables. I bought a raspberry pi and put mpd on it and it's gunna be perfect for it! (it can have a little display on it later on, and use my nice usb dac I have somewhere).
 * it should cope with any part of the system going on/offline, restarting, etc
 
-# Prerequisites
+## Architecture
 
-## On Debian/Ubuntu
+![architecture](http://nicksellen.co.uk/upld/audioplayer-architecture.jpg)
+
+## Web UI
+
+![web ui](http://nicksellen.co.uk/upld/audioplayer-webui.png)
+
+## Prerequisites
+
+### On Debian/Ubuntu
 
     apt-get install libicu52 libleveldb1 libtag1-vanilla libtagc0
